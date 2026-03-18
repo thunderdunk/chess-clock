@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a single-file HTML chess clock app (`chess-clock-0.6.html`) designed for mobile use. It requires no build step, no dependencies, and no server — just open the HTML file in a browser.
+This is a single-file HTML chess clock app (`index.html`) designed for mobile use. It requires no build step, no dependencies, and no server — just open the HTML file in a browser.
 
 ## Spec
 
@@ -12,7 +12,7 @@ See `docs/spec.md` for planned features and product requirements.
 
 ## Development
 
-Open `chess-clock-0.6.html` directly in a browser. There is no build, lint, or test toolchain.
+Open `index.html` directly in a browser. There is no build, lint, or test toolchain.
 
 ## Architecture
 
