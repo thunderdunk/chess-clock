@@ -13,7 +13,7 @@
     :root {
       --bg:            #0d0d0d;
       --panel-idle:    #131313;
-      --panel-active:  #131d13;
+      --panel-active:  #2a1a3d;
       --panel-critical:#1d0909;
       --panel-flagged: #1e0000;
       --text:          #ddd8cc;
@@ -142,6 +142,7 @@
       transition: stroke 0.3s ease;
     }
 
+    .panel.active   .arc-fill { stroke: #ff2d8f; }
     .panel.critical .arc-fill { stroke: var(--red); }
     .panel.flagged  .arc-fill { stroke: #3a0000; }
 
