@@ -2,9 +2,11 @@
 
 A two-player countdown chess clock for mobile and tablet. Runs entirely in the browser — no install, no backend, no dependencies.
 
+**Live:** https://chess-clock.dpsweet.workers.dev/
+
 ## Usage
 
-Open `chess-clock-0.6.html` in a browser. No build step required.
+Open the app in a browser or visit the link above. No install required.
 
 - Place the device flat on the table between two players (portrait mode)
 - Tap your side of the screen to stop your clock and start your opponent's
