@@ -22,4 +22,4 @@ Open `chess-clock-0.6.html` in a browser. No build step required.
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
+PolyForm Noncommercial 1.0.0 — free to use for personal and noncommercial purposes. See [LICENSE](LICENSE)
