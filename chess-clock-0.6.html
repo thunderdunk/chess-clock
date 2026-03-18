@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Chess Clock</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@600&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:            #0d0d0d;
+      --panel-idle:    #131313;
+      --panel-active:  #131d13;
+      --panel-critical:#1d0909;
+      --panel-flagged: #1e0000;
+      --text:          #ddd8cc;
+      --text-dim:      #4a4a4a;
+      --accent:        #c8a84b;
+      --accent-glow:   rgba(200,168,75,0.12);
+      --red:           #c0392b;
+      --strip:         #090909;
+      --border:        #1e1e1e;
+      --btn:           #1a1a1a;
+      --btn-hover:     #222;
+      --ring-size:     200px; /* updated by JS at runtime */
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100dvh;
+      height: 100vh; /* fallback */
+    }
+
+    /* ── Orientation lock ─────────────────────────────────────
+       Counter-rotate the app when device goes landscape so the
+       layout always appears in portrait.                       */
+    @media screen and (orientation: landscape) {
+      #app {
+        position: fixed;
+        width: 100vh;
+        height: 100vw;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(90deg);
+      }
+    }
+
+    /* ── Clock panels ─────────────────────────────────────── */
+
+    .panel {
+      flex: 1 1 0;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--panel-idle);
+      overflow: hidden;
+      transition: background 0.3s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Active border inset */
+    .panel::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border: 2px solid transparent;
+      pointer-events: none;
+      transition: border-color 0.2s ease;
+      z-index: 3;
+    }
+    .panel.active::after  { border-color: var(--accent); }
+    .panel.critical::after { border-color: var(--red); }
+
+    .panel.active   { background: var(--panel-active); }
+    .panel.critical { background: var(--panel-critical); }
+    .panel.flagged  { background: var(--panel-flagged); }
+
+    /* Player 2: rotated so they can read from the other side */
+    #p2 { transform: rotate(180deg); }
+
+    /* ── Arc ring ─────────────────────────────────────────── */
+
+    /* Square container sized to --ring-size, centred in the panel */
+    .clock-face {
+      position: relative;
+      width:  var(--ring-size);
+      height: var(--ring-size);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .arc-wrap {
+      position: absolute;
+      inset: 0;
+      transform: rotate(-90deg); /* start stroke at 12 o'clock */
+      z-index: 1;
+    }
+
+    /* Player 2's arc must go counterclockwise in DOM coords
+       so it appears clockwise from their rotated POV */
+    #p2 .arc-wrap {
+      transform: rotate(-90deg) scaleX(-1);
+    }
+
+    .arc-track {
+      fill: none;
+      stroke: #1e1e1e;
+      stroke-width: 3;
+    }
+
+    .arc-fill {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray:    326.73; /* 2π × 52 */
+      stroke-dashoffset:   0;
+      transition: stroke 0.3s ease;
+    }
+
+    .panel.critical .arc-fill { stroke: var(--red); }
+    .panel.flagged  .arc-fill { stroke: #3a0000; }
+
+    /* ── Clock content (centred inside the ring) ─────────── */
+
+    /* Constrain inner content to ~72% of ring-size to stay
+       comfortably clear of the SVG stroke.
+       align-items + justify-content centres both axes.        */
+    .clock-inner {
+      position: relative;
+      z-index: 2;
+      width:  calc(var(--ring-size) * 0.72);
+      height: calc(var(--ring-size) * 0.72);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .clock-label {
+      font-size: calc(var(--ring-size) * 0.06);
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: calc(var(--ring-size) * 0.03);
+    }
+
+    /* Widest format is "9:59.9" (6 chars).
+       Roboto Mono char width ≈ 0.6× font-size.
+       6 × 0.6 × fs < ring-size × 0.72  →  fs < ring-size × 0.2
+       Using 0.19 leaves a small safety margin.                   */
+    .clock-time {
+      font-family: 'Roboto Mono', 'Courier New', monospace;
+      font-weight: 600;
+      font-size: calc(var(--ring-size) * 0.19);
+      line-height: 1;
+      color: var(--text);
+      transition: color 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .panel.critical .clock-time { color: #ff6b5b; }
+    .panel.flagged  .clock-time { color: #ff3322; }
+
+    /* ── Control strip ────────────────────────────────────── */
+
+    #strip {
+      flex-shrink: 0;
+      background: var(--strip);
+      border-top:    1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: clamp(8px, 2vh, 14px) clamp(12px, 3vw, 22px);
+      display: flex;
+      flex-direction: column;
+      gap: clamp(7px, 1.5vh, 11px);
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(5px, 1.2vw, 9px);
+    }
+
+    /* ── Buttons ──────────────────────────────────────────── */
+
+    button {
+      font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: var(--btn);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.12s, opacity 0.15s, transform 0.08s;
+    }
+
+    button:hover   { background: var(--btn-hover); }
+    button:active  { transform: scale(0.94); }
+    button:disabled { opacity: 0.25; pointer-events: none; }
+
+    .btn-action {
+      font-size: clamp(0.78rem, 2.1vw, 1rem);
+      padding: clamp(8px, 1.8vh, 12px) clamp(14px, 3.5vw, 26px);
+      min-height: clamp(36px, 7.5vw, 48px);
+    }
+
+    .btn-action.primary {
+      background: var(--accent);
+      color: #111;
+      border-color: var(--accent);
+    }
+    .btn-action.primary:hover { background: #d4b454; }
+
+    .btn-preset {
+      flex: 1;
+      font-size: clamp(0.68rem, 1.8vw, 0.9rem);
+      padding: clamp(6px, 1.5vh, 10px) 4px;
+      min-height: clamp(30px, 6.5vw, 44px);
+    }
+
+    .btn-preset.selected {
+      background: var(--accent-glow);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .move-count {
+      font-size: clamp(0.62rem, 1.7vw, 0.82rem);
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      min-width: 72px;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .btn-sound {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding-left: clamp(10px, 2.5vw, 18px);
+      padding-right: clamp(10px, 2.5vw, 18px);
+    }
+    .btn-sound.muted { opacity: 0.45; }
+
+    /* ── Tablet scaling ───────────────────────────────────── */
+
+    @media (min-width: 768px) {
+      .btn-action   { font-size: 1.05rem; padding: 13px 30px; min-height: 52px; }
+      .btn-preset   { font-size: 0.95rem; padding: 12px 8px;  min-height: 48px; }
+      .move-count   { font-size: 0.88rem; min-width: 88px; }
+      #strip        { padding: 16px 28px; gap: 13px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Player 2 — top, rotated 180° toward them -->
+  <div class="panel" id="p2">
+    <div class="clock-face">
+      <div class="arc-wrap">
+        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <circle class="arc-track" cx="60" cy="60" r="52"/>
+          <circle class="arc-fill"  cx="60" cy="60" r="52" id="arc2"/>
+        </svg>
+      </div>
+      <div class="clock-inner">
+        <div class="clock-label">Player 2</div>
+        <div class="clock-time" id="time2">5:00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Control strip -->
+  <div id="strip">
+    <div class="row" id="presets">
+      <button class="btn-preset"          data-min="1"  onclick="selectPreset(1)">1 min</button>
+      <button class="btn-preset"          data-min="3"  onclick="selectPreset(3)">3 min</button>
+      <button class="btn-preset selected" data-min="5"  onclick="selectPreset(5)">5 min</button>
+      <button class="btn-preset"          data-min="10" onclick="selectPreset(10)">10 min</button>
+    </div>
+    <div class="row">
+      <button class="btn-action primary" id="btn-start"  onclick="handleStart()">Start</button>
+      <button class="btn-action"         id="btn-pause"  onclick="handlePause()" disabled>Pause</button>
+      <button class="btn-action"         id="btn-reset"  onclick="handleReset()">Reset</button>
+      <button class="btn-action btn-sound" id="btn-sound" onclick="handleSoundToggle()">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+          <path id="sound-path" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+        </svg>
+        <span id="sound-label">Sound</span>
+      </button>
+      <div class="move-count" id="moves">Moves: 0</div>
+    </div>
+  </div>
+
+  <!-- Player 1 — bottom, right-side up -->
+  <div class="panel" id="p1">
+    <div class="clock-face">
+      <div class="arc-wrap">
+        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+          <circle class="arc-track" cx="60" cy="60" r="52"/>
+          <circle class="arc-fill"  cx="60" cy="60" r="52" id="arc1"/>
+        </svg>
+      </div>
+      <div class="clock-inner">
+        <div class="clock-label">Player 1</div>
+        <div class="clock-time" id="time1">5:00</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+  // ── Constants ────────────────────────────────────────────
+  const CIRC = 2 * Math.PI * 52; // SVG arc circumference ≈ 326.73
+
+  // ── State ────────────────────────────────────────────────
+  // States: READY | RUNNING | PAUSED | FLAGGED
+  let gameState = 'READY';
+  let activePlayer = 1;       // 1 or 2; player 1 (white) always starts
+  let presetMs = 5 * 60000;   // current preset in milliseconds
+
+  // Remaining time in ms for each player — source of truth when not running
+  let remaining = { 1: presetMs, 2: presetMs };
+
+  // Timestamp (performance.now()) when the active player's turn began
+  let turnStart = null;
+  // Remaining time for the active player at the moment their turn started
+  let timeAtTurnStart = null;
+
+  let moveCount = 0;
+  let rafId = null;
+  let wakeLock = null;
+
+  // ── Audio (Web Audio API — no external files) ────────────
+  let audioCtx = null;
+
+  // ── Sound state ───────────────────────────────────────────
+  let soundOn = true;
+
+  const ICON_SOUND_ON  = 'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z';
+  const ICON_SOUND_OFF = 'M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z';
+
+  function handleSoundToggle() {
+    soundOn = !soundOn;
+    document.getElementById('sound-path').setAttribute('d', soundOn ? ICON_SOUND_ON : ICON_SOUND_OFF);
+    document.getElementById('sound-label').textContent = soundOn ? 'Sound' : 'Muted';
+    document.getElementById('btn-sound').classList.toggle('muted', !soundOn);
+  }
+
+  function getAudioCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioCtx;
+  }
+
+  async function playTap() {
+    if (!soundOn) return;
+    try {
+      const ctx = getAudioCtx();
+      if (ctx.state === 'suspended') await ctx.resume();
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(260, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.07);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.1);
+    } catch (e) {}
+  }
+
+  async function playAlarm() {
+    if (!soundOn) return;
+    try {
+      const ctx = getAudioCtx();
+      if (ctx.state === 'suspended') await ctx.resume();
+      [0, 0.28, 0.56].forEach(t => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(440, ctx.currentTime + t);
+        osc.frequency.setValueAtTime(330, ctx.currentTime + t + 0.1);
+        gain.gain.setValueAtTime(0.18, ctx.currentTime + t);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.24);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + 0.24);
+      });
+    } catch (e) {}
+  }
+
+  // ── Haptic ───────────────────────────────────────────────
+  function vibrate() {
+    try {
+      if ('vibrate' in navigator) navigator.vibrate(30);
+    } catch (e) {}
+  }
+
+  // ── Wake Lock ────────────────────────────────────────────
+  async function grabWakeLock() {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+      }
+    } catch (e) {}
+  }
+
+  function dropWakeLock() {
+    try {
+      if (wakeLock) { wakeLock.release(); wakeLock = null; }
+    } catch (e) {}
+  }
+
+  // Re-acquire wake lock if game is still running after tab becomes visible
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && gameState === 'RUNNING') {
+      grabWakeLock();
+    }
+  });
+
+  // ── Time formatting ──────────────────────────────────────
+  function formatTime(ms) {
+    if (ms <= 0) return '0.0';
+    if (ms >= 60000) {
+      const m = Math.floor(ms / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      return `${m}:${String(s).padStart(2, '0')}`;
+    }
+    // Under a minute: show tenths
+    const s = Math.floor(ms / 1000);
+    const d = Math.floor((ms % 1000) / 100);
+    return `${s}.${d}`;
+  }
+
+  // ── Arc update ───────────────────────────────────────────
+  // fraction 0–1: how much of the circle to show
+  function setArc(arcEl, fraction) {
+    const clamped = Math.max(0, Math.min(1, fraction));
+    arcEl.style.strokeDashoffset = CIRC * (1 - clamped);
+  }
+
+  // ── Live time computation ────────────────────────────────
+  // Returns { 1: ms, 2: ms } with the active player's time computed live
+  function getLive() {
+    const live = { ...remaining };
+    if (gameState === 'RUNNING' && turnStart !== null) {
+      const elapsed = performance.now() - turnStart;
+      live[activePlayer] = Math.max(0, timeAtTurnStart - elapsed);
+    }
+    return live;
+  }
+
+  // ── Render loop ──────────────────────────────────────────
+  function render() {
+    const live = getLive();
+
+    // Update time displays
+    document.getElementById('time1').textContent = formatTime(live[1]);
+    document.getElementById('time2').textContent = formatTime(live[2]);
+    document.getElementById('moves').textContent = `Moves: ${moveCount}`;
+
+    // Update arcs — fraction relative to original starting time
+    setArc(document.getElementById('arc1'), live[1] / presetMs);
+    setArc(document.getElementById('arc2'), live[2] / presetMs);
+
+    // Update panel visual states
+    [1, 2].forEach(p => {
+      const el = document.getElementById(`p${p}`);
+      el.classList.remove('active', 'critical', 'flagged');
+
+      if (gameState === 'FLAGGED' && live[p] <= 0) {
+        el.classList.add('flagged');
+      } else if (gameState === 'RUNNING' && activePlayer === p) {
+        el.classList.add('active');
+        if (live[p] < 10000) el.classList.add('critical');
+      }
+    });
+
+    // Check for flag fall during RUNNING
+    if (gameState === 'RUNNING' && live[activePlayer] <= 0) {
+      doFlagFall();
+      return;
+    }
+
+    // Continue loop only while running
+    if (gameState === 'RUNNING') {
+      rafId = requestAnimationFrame(render);
+    }
+  }
+
+  // ── Flag fall ─────────────────────────────────────────────
+  function doFlagFall() {
+    remaining[activePlayer] = 0;
+    gameState = 'FLAGGED';
+    cancelAnimationFrame(rafId);
+    dropWakeLock();
+    playAlarm();
+    updateButtons();
+    render();
+  }
+
+  // ── Clock tap ────────────────────────────────────────────
+  function handleTap(player) {
+    if (gameState !== 'RUNNING') return;
+    if (player !== activePlayer) return;
+
+    // Snapshot active player's remaining time
+    remaining[activePlayer] = Math.max(0, timeAtTurnStart - (performance.now() - turnStart));
+
+    // Hand off to the other player
+    activePlayer = activePlayer === 1 ? 2 : 1;
+    turnStart = performance.now();
+    timeAtTurnStart = remaining[activePlayer];
+    moveCount++;
+
+    playTap();
+    vibrate();
+  }
+
+  // Touch handlers for clock panels (touchstart for minimal latency)
+  ['p1', 'p2'].forEach(id => {
+    const el = document.getElementById(id);
+    const player = id === 'p1' ? 1 : 2;
+
+    el.addEventListener('touchstart', e => {
+      e.preventDefault(); // prevents 300ms delay & scroll
+      handleTap(player);
+    }, { passive: false });
+
+    // Fallback for mouse/desktop
+    el.addEventListener('click', () => handleTap(player));
+  });
+
+  // ── Control handlers ──────────────────────────────────────
+  function handleStart() {
+    if (gameState === 'READY') {
+      gameState = 'RUNNING';
+      activePlayer = 1; // Player 1 (White) always starts
+      turnStart = performance.now();
+      timeAtTurnStart = remaining[1];
+      grabWakeLock();
+      updateButtons();
+      rafId = requestAnimationFrame(render);
+    } else if (gameState === 'PAUSED') {
+      gameState = 'RUNNING';
+      turnStart = performance.now();
+      timeAtTurnStart = remaining[activePlayer];
+      grabWakeLock();
+      updateButtons();
+      rafId = requestAnimationFrame(render);
+    }
+  }
+
+  function handlePause() {
+    if (gameState !== 'RUNNING') return;
+    // Snapshot remaining time before stopping
+    remaining[activePlayer] = Math.max(0, timeAtTurnStart - (performance.now() - turnStart));
+    cancelAnimationFrame(rafId);
+    gameState = 'PAUSED';
+    dropWakeLock();
+    updateButtons();
+    render();
+  }
+
+  function handleReset() {
+    cancelAnimationFrame(rafId);
+    gameState = 'READY';
+    activePlayer = 1;
+    remaining = { 1: presetMs, 2: presetMs };
+    turnStart = null;
+    timeAtTurnStart = null;
+    moveCount = 0;
+    dropWakeLock();
+    updateButtons();
+    render();
+  }
+
+  function selectPreset(minutes) {
+    presetMs = minutes * 60000;
+    document.querySelectorAll('.btn-preset').forEach(btn => {
+      btn.classList.toggle('selected', parseInt(btn.dataset.min) === minutes);
+    });
+    handleReset();
+  }
+
+  // ── Button state ──────────────────────────────────────────
+  function updateButtons() {
+    const btnStart = document.getElementById('btn-start');
+    const btnPause = document.getElementById('btn-pause');
+
+    btnStart.classList.remove('primary');
+    btnStart.disabled = false;
+    btnPause.disabled = true;
+
+    if (gameState === 'READY') {
+      btnStart.textContent = 'Start';
+      btnStart.classList.add('primary');
+    } else if (gameState === 'RUNNING') {
+      btnStart.textContent = 'Start';
+      btnStart.disabled = true;
+      btnPause.disabled = false;
+    } else if (gameState === 'PAUSED') {
+      btnStart.textContent = 'Resume';
+      btnStart.classList.add('primary');
+    } else if (gameState === 'FLAGGED') {
+      btnStart.textContent = 'Start';
+      btnStart.disabled = true;
+    }
+  }
+
+  // ── Ring sizing ───────────────────────────────────────────
+  // Measures actual panel height at runtime so the ring fills
+  // the panel with a comfortable 5% margin on each side.
+  function updateRingSize() {
+    const panel = document.getElementById('p1');
+    const size  = Math.floor(Math.min(panel.offsetHeight, panel.offsetWidth) * 0.90);
+    document.documentElement.style.setProperty('--ring-size', size + 'px');
+  }
+
+  window.addEventListener('resize', updateRingSize);
+  window.addEventListener('orientationchange', () => setTimeout(updateRingSize, 350));
+
+  // ── Init ──────────────────────────────────────────────────
+  updateRingSize();
+  handleReset();
+</script>
+</body>
+</html>
