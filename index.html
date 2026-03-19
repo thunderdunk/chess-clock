@@ -12,61 +12,110 @@
 <body>
 <div id="app">
 
-  <!-- Player 2 — top, rotated 180° toward them -->
-  <div class="panel" id="p2">
-    <div class="clock-face">
-      <div class="arc-wrap">
-        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-          <circle class="arc-track" cx="60" cy="60" r="52"/>
-          <circle class="arc-fill"  cx="60" cy="60" r="52" id="arc2"/>
-        </svg>
-      </div>
-      <div class="clock-inner">
-        <div class="clock-label">Player 2</div>
-        <div class="clock-time" id="time2">5:00</div>
-      </div>
-    </div>
-  </div>
+  <!-- ── Start Screen ──────────────────────────────────── -->
+  <div id="start-screen">
 
-  <!-- Control strip -->
-  <div id="strip">
-    <div class="row" id="presets">
-      <button class="btn-preset"          data-min="1"  onclick="selectPreset(1)">1 min</button>
-      <button class="btn-preset"          data-min="3"  onclick="selectPreset(3)">3 min</button>
-      <button class="btn-preset selected" data-min="5"  onclick="selectPreset(5)">5 min</button>
-      <button class="btn-preset"          data-min="10" onclick="selectPreset(10)">10 min</button>
+    <!-- Top zone: Black's area, rotated 180° -->
+    <div class="start-zone" id="start-zone-top">
+      <span class="color-label" id="top-color-label">Black</span>
     </div>
-    <div class="row">
-      <button class="btn-action primary" id="btn-start"  onclick="handleStart()">Start</button>
-      <button class="btn-action"         id="btn-pause"  onclick="handlePause()" disabled>Pause</button>
-      <button class="btn-action"         id="btn-reset"  onclick="handleReset()">Reset</button>
-      <button class="btn-action btn-sound" id="btn-sound" onclick="handleSoundToggle()">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
-          <path id="sound-path" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-        </svg>
-        <span id="sound-label">Sound</span>
-      </button>
-      <div class="move-count" id="moves">Moves: 0</div>
-    </div>
-  </div>
 
-  <!-- Player 1 — bottom, right-side up -->
-  <div class="panel" id="p1">
-    <div class="clock-face">
-      <div class="arc-wrap">
-        <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-          <circle class="arc-track" cx="60" cy="60" r="52"/>
-          <circle class="arc-fill"  cx="60" cy="60" r="52" id="arc1"/>
-        </svg>
+    <!-- Middle zone: controls, rotated to face board edge -->
+    <div id="start-middle">
+      <div id="start-controls" class="board-side-target">
+        <div id="preset-picker">
+          <button class="btn-preset" data-preset="1+0"  onclick="handlePresetSelect('1+0')">1</button>
+          <button class="btn-preset" data-preset="3+0"  onclick="handlePresetSelect('3+0')">3</button>
+          <button class="btn-preset" data-preset="5+0"  onclick="handlePresetSelect('5+0')">5</button>
+          <button class="btn-preset" data-preset="10+0" onclick="handlePresetSelect('10+0')">10</button>
+          <button class="btn-preset" data-preset="30+0" onclick="handlePresetSelect('30+0')">30</button>
+          <button class="btn-preset" data-preset="60+0" onclick="handlePresetSelect('60+0')">60</button>
+        </div>
+        <div id="color-assignment">
+          <button class="btn-action" id="btn-swap"      onclick="handleSwap()">Swap</button>
+          <button class="btn-action" id="btn-randomize" onclick="handleRandomize()">Randomize</button>
+        </div>
+        <button class="btn-action primary" id="btn-start-game" onclick="handleStartGame()">Start</button>
       </div>
-      <div class="clock-inner">
-        <div class="clock-label">Player 1</div>
-        <div class="clock-time" id="time1">5:00</div>
+      <button class="btn-board-side" id="btn-board-side-start" onclick="handleBoardSideToggle()">⇄</button>
+    </div>
+
+    <!-- Bottom zone: White's area -->
+    <div class="start-zone" id="start-zone-bottom">
+      <span class="color-label" id="bottom-color-label">White</span>
+    </div>
+
+  </div><!-- /start-screen -->
+
+  <!-- ── Clock View ─────────────────────────────────────── -->
+  <div id="clock-view" style="display:none">
+
+    <!-- Black's panel — top, rotated 180° toward them -->
+    <div class="panel" id="p2">
+      <div class="clock-face">
+        <div class="arc-wrap">
+          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+            <circle class="arc-track" cx="60" cy="60" r="52"/>
+            <circle class="arc-fill"  cx="60" cy="60" r="52" id="arc2"/>
+          </svg>
+        </div>
+        <div class="clock-inner">
+          <div class="clock-label">Black</div>
+          <div class="clock-time" id="time2">5:00</div>
+        </div>
       </div>
     </div>
-  </div>
 
-</div>
+    <!-- Control strip — zero-height seam; pill floats above/below -->
+    <div id="strip">
+      <button class="btn-board-side" id="btn-board-side-clock" onclick="handleBoardSideToggle()">⇄</button>
+      <div id="control-pill-wrap" class="board-side-target">
+        <div id="control-pill">
+          <!-- Pause / Resume -->
+          <button class="ctrl-btn" id="btn-pause" onclick="handlePause()">
+            <svg class="ctrl-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+            </svg>
+            <span class="btn-label" id="pause-label">Pause</span>
+          </button>
+          <!-- Sound -->
+          <button class="ctrl-btn" id="btn-sound" onclick="handleSoundToggle()">
+            <svg class="ctrl-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path class="sound-icon-path" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+            <span class="btn-label">Sound</span>
+          </button>
+          <!-- End Game -->
+          <button class="ctrl-btn" id="btn-end-game" onclick="handleEndGame()">
+            <svg class="ctrl-icon" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/>
+            </svg>
+            <span class="btn-label">End Game</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- White's panel — bottom, right-side up -->
+    <div class="panel" id="p1">
+      <div class="clock-face">
+        <div class="arc-wrap">
+          <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+            <circle class="arc-track" cx="60" cy="60" r="52"/>
+            <circle class="arc-fill"  cx="60" cy="60" r="52" id="arc1"/>
+          </svg>
+        </div>
+        <div class="clock-inner">
+          <div class="clock-label">White</div>
+          <div class="clock-time" id="time1">5:00</div>
+          <div class="tap-prompt" id="tap-prompt" style="display:none">Tap to begin</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /clock-view -->
+
+</div><!-- /app -->
 <script src="clock.js"></script>
 </body>
 </html>
