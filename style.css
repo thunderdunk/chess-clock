@@ -94,7 +94,7 @@ body {
 /* Middle zone — contains controls + board-side toggle */
 #start-middle {
   flex-shrink: 0;
-  position: relative;
+  /* position: relative; */
   background: var(--ctrl-pill-bg);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
