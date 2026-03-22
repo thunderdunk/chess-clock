@@ -308,11 +308,16 @@ body {
 #control-pill-wrap {
   position: absolute;
   top: 0;
-  transform: translateY(-50%);
 }
 
-#control-pill-wrap.board-right { right: 16px; }
-#control-pill-wrap.board-left  { left: 16px; }
+#control-pill-wrap.board-right { 
+  right: 16px; 
+  transform: translateX(-50%) translateY(-50%) rotate(270deg);
+
+}
+#control-pill-wrap.board-left  { 
+  left: 16px; 
+  transform: translateX(50%) translateY(-50%) rotate(90deg);}
 
 /* The pill itself — matches Figma design */
 #control-pill {
