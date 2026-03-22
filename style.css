@@ -17,6 +17,7 @@
   --btn-hover:     #222;
   --ctrl-pill-bg:  #47455c;
   --ctrl-btn-bg:   #3b394b;
+  --controls-h:    130px; /* middle zone height = visual height of rotated controls */
   --ring-size:     200px; /* updated by JS at runtime */
 }
 
@@ -91,46 +92,41 @@ body {
   color: var(--text-dim);
 }
 
-/* Middle zone — contains controls + board-side toggle */
+/* Middle zone — sized by --controls-h, not by its rotated child */
 #start-middle {
   flex-shrink: 0;
-  /* position: relative; */
+  position: relative;
   background: var(--ctrl-pill-bg);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(10px, 2.5vh, 18px) 48px; /* 48px sides for board-side btn */
-  min-height: clamp(100px, 20vh, 140px);
-  max-height: 40vh;
-  width: fit-content;
+  height: var(--controls-h);
+  width: 100%;
 }
 
-/* The controls block */
+/* Absolutely positioned so it doesn't affect parent layout.
+   width = --controls-h so after 90/270° rotation, visual height = zone height.
+   flex-direction: column so stacked blocks become a visual row after rotation. */
 #start-controls {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--controls-h);
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 3vw;
 }
 
-  #start-controls.board-left {
-    transform: rotate(90deg);
-    flex-flow: column nowrap
-  }
+#start-controls.board-left  { transform: translate(-50%, -50%) rotate(90deg);  }
+#start-controls.board-right { transform: translate(-50%, -50%) rotate(270deg); }
 
-  #start-controls.board-right {
-    transform: rotate(270deg);
-    flex-flow: column nowrap
-  }
-
-  #start-controls .control-block {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 67%;
-  } 
+#start-controls .control-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
 
   #start-controls .section-heading {
     margin-bottom: 12px;
