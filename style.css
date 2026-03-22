@@ -17,7 +17,7 @@
   --btn-hover:     #222;
   --ctrl-pill-bg:  #47455c;
   --ctrl-btn-bg:   #3b394b;
-  --controls-h:    130px; /* middle zone height = visual height of rotated controls */
+  --controls-h:    240px; /* middle zone height = visual height of rotated controls */
   --ring-size:     200px; /* updated by JS at runtime */
 }
 
@@ -94,14 +94,7 @@ body {
 
 /* Middle zone — sized by --controls-h, not by its rotated child */
 #start-middle {
-  flex-shrink: 0;
-  position: relative;
-  background: var(--ctrl-pill-bg);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  border-radius: 12px;
   height: var(--controls-h);
-  width: 100%;
 }
 
 /* Absolutely positioned so it doesn't affect parent layout.
@@ -116,6 +109,10 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 3vw;
+  background: var(--ctrl-pill-bg);
+  padding: 16px;
+  border-radius: 12px;
+
 }
 
 #start-controls.board-left  { transform: translate(-50%, -50%) rotate(90deg);  }
@@ -305,14 +302,14 @@ body {
   top: 0;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   background: var(--ctrl-btn-bg);
-  color: var(--text-dim);
+  color: var(--text);
   border: 1px solid #555;
   border-radius: 50%;
-  font-size: 0.75rem;
+  font-size: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
