@@ -112,7 +112,7 @@ body {
 #start-controls {
   display: flex;
   align-items: center;
-  gap: clamp(8px, 2vw, 16px);
+  gap: 3vw;
 }
 
   #start-controls.board-left {
@@ -125,20 +125,33 @@ body {
     flex-flow: column nowrap
   }
 
-#preset-picker {
-  display: flex;
-  align-items: center;
-  gap: clamp(4px, 1vw, 8px);
-  flex-flow: row wrap;
-  justify-content: center;
-  width: 67%;
-}
+  #start-controls .control-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 67%;
+  } 
 
-#color-assignment {
-  display: flex;
-  align-items: center;
-  gap: clamp(4px, 1vw, 8px);
-}
+  #start-controls .section-heading {
+    margin-bottom: 12px;
+    width: 100%;
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text);
+    text-align: center;
+  }
+
+  #start-controls .button-container {
+    display: flex;
+    align-items: center;
+    gap: clamp(4px, 1vw, 8px);
+    flex-flow: row wrap;
+    justify-content: center;
+  }
+
+
 
 /* ════════════════════════════════════════════════════════════
    CLOCK VIEW
@@ -417,6 +430,13 @@ button:disabled { opacity: 0.25; pointer-events: none; }
   border-color: var(--accent);
 }
 .btn-action.primary:hover { background: #d4b454; }
+
+#btn-start-game {
+  background: #2e7d32;
+  color: #fff;
+  border-color: #2e7d32;
+}
+#btn-start-game:hover { background: #388e3c; border-color: #388e3c; }
 
 .btn-preset {
   font-size: clamp(0.72rem, 1.9vw, 0.95rem);
