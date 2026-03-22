@@ -300,18 +300,23 @@ function showClockView() {
   updateRingSize();
 }
 
+const ICON_PAUSE  = 'M6 19h4V5H6v14zm8-14v14h4V5h-4z';
+const ICON_PLAY   = 'M8 5v14l11-7z';
+
 // ── Control strip state ───────────────────────────────────
 function updateControlStrip() {
   const running = gameState === 'RUNNING';
   const paused  = gameState === 'PAUSED';
 
-  const btnPause = document.getElementById('btn-pause');
-  const lblPause = document.getElementById('pause-label');
+  const btnPause  = document.getElementById('btn-pause');
+  const lblPause  = document.getElementById('pause-label');
+  const iconPause = btnPause.querySelector('path');
 
   // Pause visible only while game is in progress
   const showPause = running || paused;
   btnPause.style.display = showPause ? '' : 'none';
   lblPause.textContent = paused ? 'Resume' : 'Pause';
+  iconPause.setAttribute('d', paused ? ICON_PLAY : ICON_PAUSE);
 
   updateSoundBtn();
 }
